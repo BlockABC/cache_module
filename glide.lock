@@ -1,0 +1,51 @@
+hash: 8fed9f17deb952255ce7ee518415348f03b448f3dea600510ccd2e48be40b538
+updated: 2019-04-23T10:47:08.29392+08:00
+imports:
+- name: github.com/bradfitz/gomemcache
+  version: 551aad21a6682b95329c1f5bd62ee5060d64f7e8
+  subpackages:
+  - memcache
+- name: github.com/gin-contrib/cors
+  version: cf4846e6a636a76237a28d9286f163c132e841bc
+- name: github.com/gin-contrib/sse
+  version: 5545eab6dad3bbbd6c5ae9186383c2a9d23c0dae
+- name: github.com/gin-gonic/gin
+  version: b869fe1415e4b9eb52f247441830d502aece2d4d
+  subpackages:
+  - binding
+  - json
+  - render
+- name: github.com/go-redis/redis
+  version: d22fde8721cc915a55aeb6b00944a76a92bfeb6e
+  subpackages:
+  - internal
+  - internal/consistenthash
+  - internal/hashtag
+  - internal/pool
+  - internal/proto
+  - internal/util
+- name: github.com/golang/protobuf
+  version: aa810b61a9c79d51363740d207bb46cf8e620ed5
+  subpackages:
+  - proto
+- name: github.com/json-iterator/go
+  version: 0ff49de124c6f76f8494e194af75bde0f1a49a29
+- name: github.com/mattn/go-isatty
+  version: a6dda38a851a575e6799957cdd53ffe0b3fdd90f
+- name: github.com/modern-go/concurrent
+  version: bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94
+- name: github.com/modern-go/reflect2
+  version: 94122c33edd36123c84d5368cfb2b69df93a0ec8
+- name: github.com/ugorji/go
+  version: 8fd0f8d918c8f0b52d0af210a812ba882cc31a1e
+  subpackages:
+  - codec
+- name: golang.org/x/sys
+  version: d4feaf1a7e61e1d9e79e6c4e76c6349e9cab0a03
+  subpackages:
+  - unix
+- name: gopkg.in/go-playground/validator.v8
+  version: 5f1438d3fca68893a817e4a66806cea46a9e4ebf
+- name: gopkg.in/yaml.v2
+  version: 51d6538a90f86fe93ac480b35f37b2be17fef232
+testImports: []
