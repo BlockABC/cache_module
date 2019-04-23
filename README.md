@@ -38,8 +38,8 @@ func main() {
 }
 
 ```
-[![Build Status](https://travis-ci.org/gin-gonic/gin.svg)](https://travis-ci.org/gin-gonic/gin)
 
+![](./cache.jpg)
 
 
 ## 使用12个线程运行30秒, 400个http并发
