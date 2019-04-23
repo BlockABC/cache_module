@@ -3,14 +3,14 @@
 
 ## 使用
 
-```
+```sh
 go get github.com/BlockABC/cache
 
 ```
 
 ## Demo  main.go
 
-```
+```go
 package main
 
 import (
@@ -38,13 +38,13 @@ func main() {
 }
 
 ```
-
+[![Build Status](https://travis-ci.org/gin-gonic/gin.svg)](https://travis-ci.org/gin-gonic/gin)
 
 
 
 ## 使用12个线程运行30秒, 400个http并发
 
-```
+```sh
 wrk -t12 -c400 -d30s http://127.0.0.1:8080/test
 
 
