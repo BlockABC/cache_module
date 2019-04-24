@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/BlockABC/cache"
-	"github.com/BlockABC/cache/redis"
+	"github.com/BlockABC/cache_module"
+	"github.com/BlockABC/cache_module/redis"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
