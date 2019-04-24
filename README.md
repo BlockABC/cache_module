@@ -4,7 +4,7 @@
 ## 使用
 
 ```sh
-go get github.com/BlockABC/cache
+go get github.com/BlockABC/cache_module
 
 ```
 

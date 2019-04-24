@@ -1,7 +1,0 @@
-package: github.com/BlockABC/cache
-import:
-- package: github.com/bradfitz/gomemcache
-  subpackages:
-  - memcache
-- package: github.com/go-redis/redis
-  version: ~6.15.2
