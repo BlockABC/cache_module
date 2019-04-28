@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/BlockABC/cache_module"
 	"github.com/BlockABC/cache_module/redis"
 	"github.com/gin-gonic/gin"
@@ -14,8 +13,6 @@ func main() {
 	cacheMiddleware := cache.NewCacheMiddleware(nil, cacheClient, true)
 
 	router.POST("/test", cacheMiddleware.CachePOST(30, cache.Redis), func(c *gin.Context) {
-		bytes, err := c.GetRawData()
-		fmt.Println(string(bytes),err)
 		c.JSON(http.StatusOK, gin.H{"errno": 0, "errmsg": "Success", "data": gin.H{"symbol_list": gin.H{"symbol": "EOS", "code": "eosio.token", "balance": "2.7937"}}})
 	})
 

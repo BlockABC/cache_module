@@ -324,6 +324,10 @@ func cacheRequestByRedis(m *Middleware, cacheTime int32, c *gin.Context, keyGett
 	var apiResp module.ApiResp
 	body := blw.body.Bytes()
 	if err := json.Unmarshal(body, &apiResp); err != nil {
+		//有返回解锁
+		if err := m.cacheClientRedis.Client.Set(isLockKey, RequestUnlock, 600*time.Second).Err(); err != nil {
+			log.Println("Unlock err：", isLockKey, isLock, err, cacheTime)
+		}
 		return
 	}
 
@@ -337,11 +341,18 @@ func cacheRequestByRedis(m *Middleware, cacheTime int32, c *gin.Context, keyGett
 		if err := m.cacheClientRedis.Client.Set(isLockTimeKey, fmt.Sprintf("%d", time.Now().Unix()), 0).Err(); err != nil {
 			log.Println("Cache lock time and cache time failed err：", isLockKey, isLock, err)
 		}
-
-		//解锁
-		if err := m.cacheClientRedis.Client.Set(isLockKey, RequestUnlock, 600*time.Second).Err(); err != nil {
-			log.Println("Unlock err：", isLockKey, isLock, err, cacheTime)
-		}
-
 	}
+	//有返回解锁
+	if err := m.cacheClientRedis.Client.Set(isLockKey, RequestUnlock, 600*time.Second).Err(); err != nil {
+		log.Println("Unlock err：", isLockKey, isLock, err, cacheTime)
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			//有返回解锁
+			if err := m.cacheClientRedis.Client.Set(isLockKey, RequestUnlock, 600*time.Second).Err(); err != nil {
+				log.Println("Unlock err：", isLockKey, isLock, err, cacheTime)
+			}
+		}
+	}()
 }
