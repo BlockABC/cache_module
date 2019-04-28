@@ -125,9 +125,12 @@ func cachePostByRedis(cacheTime int32, m *Middleware) gin.HandlerFunc {
 		cacheRequestByRedis(
 			m, cacheTime, c,
 			func(c *gin.Context) string {
-				bodyBytes, _ := ioutil.ReadAll(c.Request.Body)
+				//bodyBytes, _ := ioutil.ReadAll(c.Request.Body)
+				bodyBytes, _ := c.GetRawData()
 				urlBytes := []byte(c.Request.URL.String())
-				return string(append(bodyBytes, urlBytes...))
+				// gin post 参数只能读取一次 所以需要把body传下去
+				c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes)) // 关键点
+				return string(append(urlBytes, bodyBytes...))
 			},
 			DefaultApiRespShouldCacheHandler)
 	}
