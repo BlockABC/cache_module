@@ -187,7 +187,7 @@ func cacheRequestByMemCache(m *Middleware, cacheTime int32, c *gin.Context, keyG
 	if string(isLock) == RequestLock {
 		//直接返回空
 		c.AbortWithStatusJSON(http.StatusOK, module.ApiResp{
-			Errno:  util.SUCCESS_CODE,
+			Errno:  util.RequestLock,
 			Errmsg: "Try again later",
 			Data:   []interface{}{},
 		})
@@ -291,7 +291,7 @@ func cacheRequestByRedis(m *Middleware, cacheTime int32, c *gin.Context, keyGett
 	if isLock == RequestLock {
 		//直接返回空
 		c.AbortWithStatusJSON(http.StatusOK, module.ApiResp{
-			Errno:  util.SUCCESS_CODE,
+			Errno:  util.RequestLock,
 			Errmsg: "Try again later",
 			Data:   []interface{}{},
 		})

@@ -8,6 +8,7 @@ import (
 
 const (
 	SUCCESS_CODE = 0
+	RequestLock  = 255
 )
 
 
