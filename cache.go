@@ -352,16 +352,6 @@ func cacheRequestByRedis(m *Middleware, cacheTime int32, c *gin.Context, keyGett
 		if err := m.cacheClientRedis.Client.Set(isLockTimeKey, fmt.Sprintf("%d", time.Now().Unix()), 0).Err(); err != nil {
 			log.Println("Cache lock time and cache time failed err：", isLockKey, isLock, err)
 		}
-	}else{
-		// 缓存返回结果的时间和接口执行的时间
-		if err := m.cacheClientMemCache.Set(isLockTimeKey, []byte(fmt.Sprintf("%d", time.Now().Unix())), 0); err != nil {
-			log.Println("Cache lock time and cache time failed err：", isLockKey, isLock, err)
-		}
-
-		//解锁
-		if err := m.cacheClientMemCache.Set(isLockKey, []byte(RequestUnlock), 600); err != nil {
-			log.Println("Unlock err：", isLockKey, isLock, err, cacheTime)
-		}
 	}
 	//有返回解锁
 	if err := m.cacheClientRedis.Client.Set(isLockKey, RequestUnlock, 600*time.Second).Err(); err != nil {
