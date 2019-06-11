@@ -255,10 +255,12 @@ func cacheRequestByRedis(m *Middleware, cacheTime int32, c *gin.Context, keyGett
 	if !m.enableCache {
 		return
 	}
+
 	//请求key
 	key := keyGetter(c)
 	//锁定key
 	isLockKey := LOCK + key
+
 	//锁定时间
 	isLockTimeKey := RequestCacheTime + key
 	//缓存结果
@@ -267,6 +269,15 @@ func cacheRequestByRedis(m *Middleware, cacheTime int32, c *gin.Context, keyGett
 	isLock, _ := m.cacheClientRedis.Client.Get(isLockKey).Result()
 	//锁定时间
 	lockTime, _ := m.cacheClientRedis.Client.Get(isLockTimeKey).Result()
+
+	defer func() {
+		if r := recover(); r != nil {
+			//有返回解锁
+			if err := m.cacheClientRedis.Client.Set(isLockKey, RequestUnlock, 600*time.Second).Err(); err != nil {
+				fmt.Println("Unlock err：", isLockKey, isLock, err, cacheTime)
+			}
+		}
+	}()
 	//log.Print("test：", isLock, errCache, lockTime, errCacheLockTime, err)
 	// cache 中存在对应的条目
 	if err == nil {
@@ -357,13 +368,4 @@ func cacheRequestByRedis(m *Middleware, cacheTime int32, c *gin.Context, keyGett
 	if err := m.cacheClientRedis.Client.Set(isLockKey, RequestUnlock, 600*time.Second).Err(); err != nil {
 		log.Println("Unlock err：", isLockKey, isLock, err, cacheTime)
 	}
-
-	defer func() {
-		if r := recover(); r != nil {
-			//有返回解锁
-			if err := m.cacheClientRedis.Client.Set(isLockKey, RequestUnlock, 600*time.Second).Err(); err != nil {
-				log.Println("Unlock err：", isLockKey, isLock, err, cacheTime)
-			}
-		}
-	}()
 }
