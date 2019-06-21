@@ -35,13 +35,17 @@ type Middleware struct {
 	cacheClientMemCache *memche.Client
 	cacheClientRedis    *redis.Client
 	enableCache         bool
+	lockTime            int
 }
 
-func NewCacheMiddleware(cacheClientMemCache *memche.Client, cacheClientRedis *redis.Client, enableCache bool) *Middleware {
+func NewCacheMiddleware(cacheClientMemCache *memche.Client, cacheClientRedis *redis.Client, enableCache bool, lockTime ...int) *Middleware {
 	middleware := Middleware{
 		cacheClientMemCache: cacheClientMemCache,
 		cacheClientRedis:    cacheClientRedis,
 		enableCache:         enableCache,
+	}
+	if len(lockTime) > 0 {
+		middleware.lockTime = lockTime[0]
 	}
 	return &middleware
 }
@@ -323,7 +327,11 @@ func cacheRequestByRedis(m *Middleware, cacheTime int32, c *gin.Context, keyGett
 	// 没有锁定 锁定相同的请求
 	if exists == 0 || isLock == RequestUnlock {
 		//锁定
-		if err := m.cacheClientRedis.Client.Set(isLockKey, RequestLock, 600*time.Second).Err(); err != nil {
+		lockTime := 600 * time.Second
+		if m.lockTime != 0 {
+			lockTime = time.Duration(m.lockTime)
+		}
+		if err := m.cacheClientRedis.Client.Set(isLockKey, RequestLock, lockTime).Err(); err != nil {
 			log.Println("lock err：", isLockKey, isLock, err, cacheTime)
 		}
 	}
