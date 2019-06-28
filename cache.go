@@ -278,7 +278,6 @@ func cacheRequestByRedis(m *Middleware, cacheTime int32, c *gin.Context, keyGett
 		if resp, err := m.cacheClientRedis.Client.Get(key).Result(); err == nil {
 			var respMap map[string]interface{}
 			if err := json.Unmarshal([]byte(resp), &respMap); err == nil {
-				logger.Println("return from cache")
 				c.AbortWithStatusJSON(http.StatusOK, respMap)
 				return
 			}
@@ -293,13 +292,11 @@ func cacheRequestByRedis(m *Middleware, cacheTime int32, c *gin.Context, keyGett
 		if resp, err := m.cacheClientRedis.Client.Get(key).Result(); err == nil {
 			var respMap map[string]interface{}
 			if err := json.Unmarshal([]byte(resp), &respMap); err == nil {
-				logger.Println("return from cache")
 				c.AbortWithStatusJSON(http.StatusOK, respMap)
 				return
 			}
 		}
 	}
-	logger.Println("return from interface")
 	//接口未锁定，且缓存过期，则下放接口到数据库
 	blw := &bufferedWriter{body: bytes.NewBufferString(""), ResponseWriter: c.Writer}
 	c.Writer = blw
