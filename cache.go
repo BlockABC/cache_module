@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"github.com/BlockABC/cache_module/memche"
 	"github.com/BlockABC/cache_module/module"
-	"github.com/BlockABC/cache_module/redis"
 	"github.com/BlockABC/cache_module/util"
+	"github.com/go-redis/redis"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -258,24 +258,24 @@ func cacheRequestByRedis(m *Middleware, cacheTime int32, c *gin.Context, keyGett
 	if !m.enableCache {
 		return
 	}
-	lockTime := 10 * time.Minute //如果程序异常挂掉，需要清空lock，否则进入此接口就会一直走锁定逻辑
+	lockTime := 10 * time.Minute            //如果程序异常挂掉，需要清空lock，否则进入此接口就会一直走锁定逻辑，这里的问题点是每十分钟会有一次自动解锁，可能会造成新的请求下放到DB
 	key := keyGetter(c)                     //请求key
 	lockKey := LOCK + key                   //锁定key
 	updateTimeKey := RequestCacheTime + key //接口更新时间
-	defer m.cacheClientRedis.Client.Set(lockKey, RequestUnlock, lockTime)
+	defer m.cacheClientRedis.Set(lockKey, RequestUnlock, lockTime)
 	defer func() { //发生异常时，解除锁定，便于定位问题
 		if r := recover(); r != nil {
-			if err := m.cacheClientRedis.Client.Set(lockKey, RequestUnlock, lockTime).Err(); err != nil {
+			if err := m.cacheClientRedis.Set(lockKey, RequestUnlock, lockTime).Err(); err != nil {
 				logger.Println("Unlock err：", lockKey, err, cacheTime)
 			} //有返回解锁
 		}
 	}()
-	isLock, _ := m.cacheClientRedis.Client.Get(lockKey).Result() //是否锁定，当缓存为空，isLock将返回空，err可以忽略
+	isLock, _ := m.cacheClientRedis.Get(lockKey).Result() //是否锁定，当缓存为空，isLock将返回空，err可以忽略
 	if isLock == RequestUnlock {
-		_ = m.cacheClientRedis.Client.Set(lockKey, RequestLock, lockTime).Err() //立即锁定接口，保证只能有一个相同请求进入
+		_ = m.cacheClientRedis.Set(lockKey, RequestLock, lockTime).Err() //立即锁定接口，保证只能有一个相同请求进入
 	}
 	if isLock == RequestLock { //锁定，当接口锁定，即这个接口已被进入，此时相同请求不能透传到数据库，如果缓存有数据，走缓存，缓存无数据返回空
-		if resp, err := m.cacheClientRedis.Client.Get(key).Result(); err == nil {
+		if resp, err := m.cacheClientRedis.Get(key).Result(); err == nil {
 			var respMap map[string]interface{}
 			if err := json.Unmarshal([]byte(resp), &respMap); err == nil {
 				c.AbortWithStatusJSON(http.StatusOK, respMap)
@@ -287,9 +287,9 @@ func cacheRequestByRedis(m *Middleware, cacheTime int32, c *gin.Context, keyGett
 		return
 	}
 	//接口没有被锁定，那么执行过期检测，如果过期，更新缓存，没有过期，返回缓存
-	lastTime, _ := m.cacheClientRedis.Client.Get(updateTimeKey).Int64() //更新时间，如果出错，lockTime为0，肯定会超出缓存时间，因此可以不检查
+	lastTime, _ := m.cacheClientRedis.Get(updateTimeKey).Int64() //更新时间，如果出错，lockTime为0，肯定会超出缓存时间，因此可以不检查
 	if (time.Now().Unix() - lastTime) <= int64(cacheTime) {             //缓存还未过期，走缓存
-		if resp, err := m.cacheClientRedis.Client.Get(key).Result(); err == nil {
+		if resp, err := m.cacheClientRedis.Get(key).Result(); err == nil {
 			var respMap map[string]interface{}
 			if err := json.Unmarshal([]byte(resp), &respMap); err == nil {
 				c.AbortWithStatusJSON(http.StatusOK, respMap)
@@ -316,11 +316,11 @@ func cacheRequestByRedis(m *Middleware, cacheTime int32, c *gin.Context, keyGett
 		return
 	}
 	if shouldCache(&apiResp) {
-		if err := m.cacheClientRedis.Client.Set(key, string(body), 0).Err(); err != nil {
+		if err := m.cacheClientRedis.Set(key, string(body), 0).Err(); err != nil {
 			logger.Println("The cache interface failed err：", lockKey, isLock, err)
 		}
 		// 更新缓存中返回结果的时间和接口执行的时间
-		if err := m.cacheClientRedis.Client.Set(updateTimeKey, time.Now().Unix(), 0).Err(); err != nil {
+		if err := m.cacheClientRedis.Set(updateTimeKey, time.Now().Unix(), 0).Err(); err != nil {
 			log.Println("Cache lock time and cache time failed err：", lockKey, isLock, err)
 		}
 	}
