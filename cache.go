@@ -22,9 +22,8 @@ import (
 var logger = log.New(os.Stdout, "eth_client: ", log.Lshortfile|log.LstdFlags)
 
 const (
-	RequestUnlock = "0"
-	RequestLock   = "1"
-
+	RequestUnlock    = "0"
+	RequestLock      = "1"
 	MemCache         = 1
 	Redis            = 2
 	LOCK             = "lock:"
@@ -40,16 +39,16 @@ type Middleware struct {
 	enableCache         bool
 }
 
-func NewCacheMiddleware(cacheClientMemCache *memche.Client, cacheClientRedis *redis.Client, enableCache bool) *Middleware {
+func NewCacheMiddleware(memCache *memche.Client, redisCache *redis.Client, enableCache bool) *Middleware {
 	middleware := Middleware{
-		cacheClientMemCache: cacheClientMemCache,
-		cacheClientRedis:    cacheClientRedis,
+		cacheClientMemCache: memCache,
+		cacheClientRedis:    redisCache,
 		enableCache:         enableCache,
 	}
 	return &middleware
 }
 
-func (m *Middleware) CacheGET(cacheTime, cacheType int32) gin.HandlerFunc {
+func (m *Middleware) CacheGet(cacheTime, cacheType int32) gin.HandlerFunc {
 	switch cacheType {
 	case MemCache:
 		return cacheGetByMemCache(cacheTime, m)
@@ -60,7 +59,7 @@ func (m *Middleware) CacheGET(cacheTime, cacheType int32) gin.HandlerFunc {
 	}
 }
 
-func (m *Middleware) CachePOST(cacheTime, cacheType int32) gin.HandlerFunc {
+func (m *Middleware) CachePost(cacheTime, cacheType int32) gin.HandlerFunc {
 	switch cacheType {
 	case MemCache:
 		return cachePostByMemCache(cacheTime, m)
@@ -76,14 +75,11 @@ func cacheGetByMemCache(cacheTime int32, m *Middleware) gin.HandlerFunc {
 		if c.Request.Method != http.MethodGet {
 			return
 		}
-
-		cacheRequestByMemCache(
-			m, cacheTime, c,
+		cacheRequestByMemCache(m, cacheTime, c,
 			func(c *gin.Context) string {
 				url := c.Request.URL.String()
 				return util.GetMd5([]byte(url))
-			},
-			DefaultApiRespShouldCacheHandler)
+			}, DefaultApiRespShouldCacheHandler)
 	}
 }
 
@@ -92,14 +88,12 @@ func cachePostByMemCache(cacheTime int32, m *Middleware) gin.HandlerFunc {
 		if c.Request.Method != http.MethodPost || c.Request.Body == nil {
 			return
 		}
-		cacheRequestByMemCache(
-			m, cacheTime, c,
+		cacheRequestByMemCache(m, cacheTime, c,
 			func(c *gin.Context) string {
 				bodyBytes, _ := ioutil.ReadAll(c.Request.Body)
 				urlBytes := []byte(c.Request.URL.String())
 				return util.GetMd5(append(bodyBytes, urlBytes...))
-			},
-			DefaultApiRespShouldCacheHandler)
+			}, DefaultApiRespShouldCacheHandler)
 	}
 }
 
@@ -108,15 +102,11 @@ func cacheGetByRedis(cacheTime int32, m *Middleware) gin.HandlerFunc {
 		if c.Request.Method != http.MethodGet {
 			return
 		}
-
-		cacheRequestByRedis(
-			m, cacheTime, c,
+		cacheRequestByRedis(m, cacheTime, c,
 			func(c *gin.Context) string {
 				url := c.Request.URL.String()
-				//common.GetMd5([]byte(url))
 				return url
-			},
-			DefaultApiRespShouldCacheHandler)
+			}, DefaultApiRespShouldCacheHandler)
 	}
 }
 
@@ -125,22 +115,17 @@ func cachePostByRedis(cacheTime int32, m *Middleware) gin.HandlerFunc {
 		if c.Request.Method != http.MethodPost || c.Request.Body == nil {
 			return
 		}
-		cacheRequestByRedis(
-			m, cacheTime, c,
+		cacheRequestByRedis(m, cacheTime, c,
 			func(c *gin.Context) string {
-				//bodyBytes, _ := ioutil.ReadAll(c.Request.Body)
 				bodyBytes, _ := c.GetRawData()
 				urlBytes := []byte(c.Request.URL.String())
-				// gin post 参数只能读取一次 所以需要把body传下去
 				c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes)) // 关键点
 				return string(append(urlBytes, bodyBytes...))
-			},
-			DefaultApiRespShouldCacheHandler)
+			}, DefaultApiRespShouldCacheHandler)
 	}
 }
 
 func DefaultApiRespShouldCacheHandler(apiResp *module.ApiResp) bool {
-	// 请求成功，将 api 结果写入 cache
 	return apiResp.Errno == util.SUCCESS_CODE
 }
 
@@ -288,7 +273,7 @@ func cacheRequestByRedis(m *Middleware, cacheTime int32, c *gin.Context, keyGett
 	}
 	//接口没有被锁定，那么执行过期检测，如果过期，更新缓存，没有过期，返回缓存
 	lastTime, _ := m.cacheClientRedis.Get(updateTimeKey).Int64() //更新时间，如果出错，lockTime为0，肯定会超出缓存时间，因此可以不检查
-	if (time.Now().Unix() - lastTime) <= int64(cacheTime) {             //缓存还未过期，走缓存
+	if (time.Now().Unix() - lastTime) <= int64(cacheTime) {      //缓存还未过期，走缓存
 		if resp, err := m.cacheClientRedis.Get(key).Result(); err == nil {
 			var respMap map[string]interface{}
 			if err := json.Unmarshal([]byte(resp), &respMap); err == nil {
