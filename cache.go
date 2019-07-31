@@ -303,10 +303,12 @@ func cacheRequestByRedis(m *Middleware, cacheTime int32, c *gin.Context, keyGett
 	if shouldCache(&apiResp) {
 		if err := m.cacheClientRedis.Set(key, string(body), 0).Err(); err != nil {
 			logger.Println("The cache interface failed err：", lockKey, isLock, err)
+			return
 		}
 		// 更新缓存中返回结果的时间和接口执行的时间
 		if err := m.cacheClientRedis.Set(updateTimeKey, time.Now().Unix(), 0).Err(); err != nil {
 			log.Println("Cache lock time and cache time failed err：", lockKey, isLock, err)
+			return
 		}
 	}
 }
