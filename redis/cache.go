@@ -1,21 +1,31 @@
 package redis
 
 import (
+	"fmt"
 	"github.com/go-redis/redis"
 	"time"
 )
 
-func New(addr, pass string, db int, timeOut time.Duration) *redis.Client {
-	return redis.NewClient(&redis.Options{
-		Addr:         addr,
-		Password:     pass,
-		DB:           db,
-		DialTimeout:  timeOut,
-		ReadTimeout:  timeOut,
-		WriteTimeout: 3 * time.Second,
-		PoolSize:     10,
-		PoolTimeout:  30 * time.Second,
-	})
+func New(addr, pass string, db int, timeOut ...time.Duration) *redis.Client {
+	opt := &redis.Options{
+		Addr:        addr,
+		Password:    pass,
+		DB:          db,
+		PoolSize:    10,
+		PoolTimeout: 30 * time.Second,
+	}
+	switch len(timeOut) {
+	case 3:
+		opt.WriteTimeout = timeOut[2]
+		fallthrough
+	case 2:
+		opt.ReadTimeout = timeOut[1]
+		fallthrough
+	case 1:
+		opt.DialTimeout = timeOut[0]
+	}
+	fmt.Println("init option:", opt)
+	return redis.NewClient(opt)
 }
 
 func NewOptions(options *redis.Options) *redis.Client {
