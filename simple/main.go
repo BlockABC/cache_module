@@ -5,10 +5,11 @@ import (
 	"github.com/BlockABC/cache_module/redis"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"time"
 )
 
 func main() {
-	cacheClient := redis.New("127.0.0.1:6379", "", 0)
+	cacheClient := redis.New("127.0.0.1:6379", "", 0, time.Millisecond*100)
 	router := gin.New()
 	cacheMiddleware := cache.NewCacheMiddleware(nil, cacheClient, true)
 
