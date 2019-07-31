@@ -16,15 +16,17 @@ func New(addr, pass string, db int, timeOut ...time.Duration) *redis.Client {
 	}
 	switch len(timeOut) {
 	case 3:
+		fmt.Println("init write timeout:", timeOut[2])
 		opt.WriteTimeout = timeOut[2]
 		fallthrough
 	case 2:
+		fmt.Println("init read timeout:", timeOut[1])
 		opt.ReadTimeout = timeOut[1]
 		fallthrough
 	case 1:
+		fmt.Println("init dial timeout:", timeOut[0])
 		opt.DialTimeout = timeOut[0]
 	}
-	fmt.Println("init option:", opt)
 	return redis.NewClient(opt)
 }
 
