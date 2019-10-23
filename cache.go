@@ -48,25 +48,33 @@ func NewCacheMiddleware(memCache *memche.Client, redisCache *redis.Client, enabl
 	return &middleware
 }
 
-func (m *Middleware) CacheGet(cacheTime, cacheType int32) gin.HandlerFunc {
+/*
+** cacheTime:接口过期时间，过期后会重新从DB拿数据并更新到缓存
+** redisTime:redis内容过期时间，避免redis溢出问题
+ */
+func (m *Middleware) CacheGet(cacheTime, cacheType int32, redisTime time.Duration) gin.HandlerFunc {
 	switch cacheType {
 	case MemCache:
 		return cacheGetByMemCache(cacheTime, m)
 	case Redis:
-		return cacheGetByRedis(cacheTime, m)
+		return cacheGetByRedis(m, cacheTime, redisTime)
 	default:
-		return cachePostByRedis(cacheTime, m)
+		return cachePostByRedis(m, cacheTime, redisTime)
 	}
 }
 
-func (m *Middleware) CachePost(cacheTime, cacheType int32) gin.HandlerFunc {
+/*
+** cacheTime:接口过期时间，过期后会重新从DB拿数据并更新到缓存
+** redisTime:redis内容过期时间，避免redis溢出问题
+ */
+func (m *Middleware) CachePost(cacheTime, cacheType int32, redisTime time.Duration) gin.HandlerFunc {
 	switch cacheType {
 	case MemCache:
 		return cachePostByMemCache(cacheTime, m)
 	case Redis:
-		return cachePostByRedis(cacheTime, m)
+		return cachePostByRedis(m, cacheTime, redisTime)
 	default:
-		return cachePostByRedis(cacheTime, m)
+		return cachePostByRedis(m, cacheTime, redisTime)
 	}
 }
 
@@ -97,12 +105,12 @@ func cachePostByMemCache(cacheTime int32, m *Middleware) gin.HandlerFunc {
 	}
 }
 
-func cacheGetByRedis(cacheTime int32, m *Middleware) gin.HandlerFunc {
+func cacheGetByRedis(m *Middleware, cacheTime int32, redisTime time.Duration) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c.Request.Method != http.MethodGet {
 			return
 		}
-		cacheRequestByRedis(m, cacheTime, c,
+		cacheRequestByRedis(m, redisTime, cacheTime, c,
 			func(c *gin.Context) string {
 				url := c.Request.URL.String()
 				return url
@@ -110,12 +118,12 @@ func cacheGetByRedis(cacheTime int32, m *Middleware) gin.HandlerFunc {
 	}
 }
 
-func cachePostByRedis(cacheTime int32, m *Middleware) gin.HandlerFunc {
+func cachePostByRedis(m *Middleware, cacheTime int32, redisTime time.Duration) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c.Request.Method != http.MethodPost || c.Request.Body == nil {
 			return
 		}
-		cacheRequestByRedis(m, cacheTime, c,
+		cacheRequestByRedis(m, redisTime, cacheTime, c,
 			func(c *gin.Context) string {
 				bodyBytes, _ := c.GetRawData()
 				urlBytes := []byte(c.Request.URL.String())
@@ -148,7 +156,7 @@ func cacheRequestByMemCache(m *Middleware, cacheTime int32, c *gin.Context, keyG
 	// cache 中存在对应的条目
 	if err == nil {
 		var respMap map[string]interface{}
-		json.Unmarshal(resp, &respMap)
+		_ = json.Unmarshal(resp, &respMap)
 		c.AbortWithStatusJSON(http.StatusOK, respMap)
 		//是否强制更新缓存
 		isUpdate := false
@@ -239,11 +247,17 @@ func cacheRequestByMemCache(m *Middleware, cacheTime int32, c *gin.Context, keyG
 
 }
 
-func cacheRequestByRedis(m *Middleware, cacheTime int32, c *gin.Context, keyGetter cacheKeyGetter, shouldCache shouldCacheHandler) {
+/*
+** redis缓存接口，为了避免同一请求在无缓存时同时下放到DB，需要先锁定接口，再请求数据，在请求返回之前，同样的请求只能拉取到上一次缓存的数据，同时设置一个redis过期时间，避免缓存溢出问题
+ */
+func cacheRequestByRedis(m *Middleware, redisTime time.Duration, cacheTime int32, c *gin.Context, keyGetter cacheKeyGetter, shouldCache shouldCacheHandler) {
 	if !m.enableCache {
 		return
 	}
-	lockTime := 10 * time.Minute            //如果程序异常挂掉，需要清空lock，否则进入此接口就会一直走锁定逻辑，这里的问题点是每十分钟会有一次自动解锁，可能会造成新的请求下放到DB
+	/*如果程序异常挂掉，需要清空lock，否则进入此接口就会一直走锁定逻辑，
+	这里的问题点是每十分钟会有一次自动解锁，可能会造成新的请求下放到DB，
+	之所以不设置更短时间，是为了防止接口迟迟不返回导致请求下放到DB的问题，TIDB经常会因为这个挂掉*/
+	lockTime := 10 * time.Minute
 	key := keyGetter(c)                     //请求key
 	lockKey := LOCK + key                   //锁定key
 	updateTimeKey := RequestCacheTime + key //接口更新时间
@@ -301,7 +315,7 @@ func cacheRequestByRedis(m *Middleware, cacheTime int32, c *gin.Context, keyGett
 		return
 	}
 	if shouldCache(&apiResp) {
-		if err := m.cacheClientRedis.Set(key, string(body), 0).Err(); err != nil {
+		if err := m.cacheClientRedis.Set(key, string(body), redisTime).Err(); err != nil {
 			logger.Println("The cache interface failed err：", lockKey, isLock, err)
 			return
 		}

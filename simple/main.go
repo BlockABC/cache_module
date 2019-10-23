@@ -13,7 +13,7 @@ func main() {
 	router := gin.New()
 	cacheMiddleware := cache.NewCacheMiddleware(nil, cacheClient, true)
 
-	router.GET("/test", cacheMiddleware.CacheGet(30, cache.Redis), func(c *gin.Context) {
+	router.GET("/test", cacheMiddleware.CacheGet(30, cache.Redis, time.Hour*24*7), func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"errno": 0, "errmsg": "Success", "data": gin.H{"symbol_list": gin.H{"symbol": "EOS", "code": "eosio.token", "balance": "2.7937"}}})
 	})
 	_ = router.Run(":8080")
