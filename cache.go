@@ -22,6 +22,7 @@ import (
 var logger = log.New(os.Stdout, "eth_client: ", log.Lshortfile|log.LstdFlags)
 
 const (
+	Salt             = "salt"
 	RequestUnlock    = "0"
 	RequestLock      = "1"
 	MemCache         = 1
@@ -112,7 +113,7 @@ func cacheGetByRedis(m *Middleware, cacheTime int32, redisTime time.Duration) gi
 		}
 		cacheRequestByRedis(m, redisTime, cacheTime, c,
 			func(c *gin.Context) string {
-				url := c.Request.URL.String()
+				url := c.Request.URL.String() + c.GetString(Salt)
 				return url
 			}, DefaultApiRespShouldCacheHandler)
 	}
