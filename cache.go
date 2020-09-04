@@ -113,7 +113,8 @@ func cacheGetByRedis(m *Middleware, cacheTime int32, redisTime time.Duration) gi
 		}
 		cacheRequestByRedis(m, redisTime, cacheTime, c,
 			func(c *gin.Context) string {
-				url := c.Request.URL.String() + c.GetString(Salt)
+				cook, _ := json.Marshal(c.Request.Cookies()) //加入cookie的部分
+				url := c.Request.URL.String() + c.GetString(Salt) + string(cook)
 				return url
 			}, DefaultApiRespShouldCacheHandler)
 	}
@@ -127,7 +128,8 @@ func cachePostByRedis(m *Middleware, cacheTime int32, redisTime time.Duration) g
 		cacheRequestByRedis(m, redisTime, cacheTime, c,
 			func(c *gin.Context) string {
 				bodyBytes, _ := c.GetRawData()
-				urlBytes := []byte(c.Request.URL.String())
+				cook, _ := json.Marshal(c.Request.Cookies())
+				urlBytes := append([]byte(c.Request.URL.String()), cook...)
 				c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes)) // 关键点
 				return string(append(urlBytes, bodyBytes...))
 			}, DefaultApiRespShouldCacheHandler)
