@@ -322,6 +322,7 @@ func cacheRequestByRedis(m *Middleware, redisTime time.Duration, cacheTime int32
 			logger.Println("The cache interface failed err：", lockKey, isLock, err)
 			return
 		}
+
 		// 更新缓存中返回结果的时间和接口执行的时间
 		if err := m.cacheClientRedis.Set(updateTimeKey, time.Now().Unix(), time.Hour*48).Err(); err != nil {
 			log.Println("Cache lock time and cache time failed err：", lockKey, isLock, err)
